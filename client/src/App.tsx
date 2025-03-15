@@ -3,22 +3,23 @@ import DatePicker from 'react-datepicker';
 import { Upload, X, Image } from 'lucide-react';
 import { FormFormData } from './types';
 import "react-datepicker/dist/react-datepicker.css";
+import { BACKEND_URL } from '../config/config';
 
 function App() {
   const [formData, setFormData] = useState<FormFormData>({
-    projectName: '',
-    formTheme: '',
-    dateOfIdentification: '',
-    location: '',
-    gembaUnit: '',
-    category: '',
-    subCategory: '',
-    department: '',
-    currentSituation: '',
-    rootCause: '',
-    actionTaken: '',
-    standardization: '',
-    dateOfCompletion: '',
+    projectName: 'Test Project',
+    formTheme: 'Test Theme',
+    dateOfIdentification: '2025-03-20T18:30:00.000Z',
+    location: 'Plant 1',
+    gembaUnit: 'Assembly Line',
+    category: 'Mission 1000 PSB',
+    subCategory: 'Efficiency',
+    department: 'Production',
+    currentSituation: 'Test Current Situation',
+    rootCause: 'Test Root Cause',
+    actionTaken: 'Test Action Taken',
+    standardization: 'Test Standardization',
+    dateOfCompletion: '2025-03-21T18:30:00.000Z',
     beforePictures: [],
     afterPictures: [],
   });
@@ -91,30 +92,30 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/form', {
+      const response = await fetch(`${BACKEND_URL}/api/form`, {
         method: 'POST',
         body: formDataToSend,
       });
 
       if (response.ok) {
         alert('Form submitted successfully!');
-        setFormData({
-          projectName: '',
-          formTheme: '',
-          dateOfIdentification: '',
-          location: '',
-          gembaUnit: '',
-          category: '',
-          subCategory: '',
-          department: '',
-          currentSituation: '',
-          rootCause: '',
-          actionTaken: '',
-          standardization: '',
-          dateOfCompletion: '',
-          beforePictures: [],
-          afterPictures: [],
-        });
+        // setFormData({
+        //   projectName: '',
+        //   formTheme: '',
+        //   dateOfIdentification: '',
+        //   location: '',
+        //   gembaUnit: '',
+        //   category: '',
+        //   subCategory: '',
+        //   department: '',
+        //   currentSituation: '',
+        //   rootCause: '',
+        //   actionTaken: '',
+        //   standardization: '',
+        //   dateOfCompletion: '',
+        //   beforePictures: [],
+        //   afterPictures: [],
+        // });
         setPreviewImages({ before: [], after: [] });
       } else {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));

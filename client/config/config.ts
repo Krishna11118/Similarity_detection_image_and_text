@@ -1,0 +1,1 @@
+export const BACKEND_URL = 'https://cautious-engine-r6q7q4gv74q3x447-8000.app.github.dev';

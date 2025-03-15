@@ -1,27 +1,34 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
-import json
-from datetime import datetime
 import os
+from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from utils import generate_uid  # Import the utility function
 
 load_dotenv()
 
 app = FastAPI()
 
-# CORS middleware configuration
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # React dev server
+    allow_origins=[
+        "https://cautious-engine-r6q7q4gv74q3x447-5173.app.github.dev",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# MongoDB connection
-client = MongoClient(os.getenv("MONGODB_URI", "mongodb+srv://adminamlgo:amlgogo@cluster0.0bcnc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"))
+# MongoDB Connection
+mongo_uri = os.getenv("MONGODB_URI")
+if not mongo_uri:
+    raise ValueError("MongoDB connection string is missing in environment variables.")
+
+client = MongoClient(mongo_uri)
 db = client.form_db
 
 # Ensure uploads directory exists
@@ -43,11 +50,14 @@ async def create_form(
     actionTaken: str = Form(...),
     standardization: str = Form(...),
     dateOfCompletion: str = Form(...),
-    beforePictures: list[UploadFile] = File(None),
-    afterPictures: list[UploadFile] = File(None)   
+    beforePictures: List[UploadFile] = File([]),
+    afterPictures: List[UploadFile] = File([])   
 ):
-    # Create document for MongoDB
+    # Generate unique UID
+    uid = generate_uid(db)
+
     form_data = {
+        "uid": uid,  # Store the generated UID
         "projectName": projectName,
         "formTheme": formTheme,
         "dateOfIdentification": dateOfIdentification,
@@ -67,25 +77,29 @@ async def create_form(
     }
 
     # Handle before pictures
-    for picture in beforePictures:
-        file_path = f"{UPLOAD_DIR}/{datetime.now().timestamp()}_before_{picture.filename}"
-        with open(file_path, "wb") as f:
-            content = await picture.read()
-            f.write(content)
-        form_data["beforePicturePaths"].append(file_path)
+    if beforePictures:
+        for picture in beforePictures:
+            if picture.filename:  # Ensure it's not an empty file
+                file_path = f"{UPLOAD_DIR}/{datetime.now().timestamp()}_before_{picture.filename}"
+                with open(file_path, "wb") as f:
+                    content = await picture.read()
+                    f.write(content)
+                form_data["beforePicturePaths"].append(file_path)
 
     # Handle after pictures
-    for picture in afterPictures:
-        file_path = f"{UPLOAD_DIR}/{datetime.now().timestamp()}_after_{picture.filename}"
-        with open(file_path, "wb") as f:
-            content = await picture.read()
-            f.write(content)
-        form_data["afterPicturePaths"].append(file_path)
+    if afterPictures:
+        for picture in afterPictures:
+            if picture.filename:
+                file_path = f"{UPLOAD_DIR}/{datetime.now().timestamp()}_after_{picture.filename}"
+                with open(file_path, "wb") as f:
+                    content = await picture.read()
+                    f.write(content)
+                form_data["afterPicturePaths"].append(file_path)
 
     # Save to MongoDB
-    result = db.form.insert_one(form_data)
-    
-    return {"message": "Form created successfully", "id": str(result.inserted_id)}
+    result = db.forms.insert_one(form_data)
+    return {"message": "Form created successfully", "uid": uid, "id": str(result.inserted_id)}
+
 
 if __name__ == "__main__":
     import uvicorn
