@@ -6,3 +6,9 @@ fastapi
 uvicorn
 motor
 pymongo
+
+torchvision
+pillow
+imagehash
+scipy
+transformers
