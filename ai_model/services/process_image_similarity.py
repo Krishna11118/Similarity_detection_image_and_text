@@ -834,46 +834,449 @@
 #         print(f"🔍 {res['queryImagePath']} (UID: {res['queryUid']}) vs {res['comparedImagePath']} (UID: {res['comparedUid']}) -> {res['similarityScore']}% similarity")
 
 
+# import torch
+# from transformers import CLIPProcessor, CLIPModel
+# from PIL import Image
+# import numpy as np
+# import os
+# from bson import ObjectId
+# import logging
+# from dataclasses import dataclass
+# from typing import List, Dict, Optional
+# from config.db import get_db  # Assuming this is your DB config
 
+# @dataclass
+# class Config:
+#     model_name: str = "openai/clip-vit-large-patch14-336"
+#     base_dir: str = "/workspace/Text_and_Image_detection_web_app/backend/"
+#     # /workspace/Text_and_Image_detection_web_app/backend/uploads
+#     similarity_threshold: float = 85.0
+#     batch_size: int = 32
+#     max_image_size: int = 336
+
+# # Configure logging
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# )
+# logger = logging.getLogger(__name__)
+
+# class ImageSimilarityProcessor:
+#     def __init__(self, config: Config = Config()):
+#         """Initialize the image similarity processor."""
+#         self.config = config
+#         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         logger.info(f"Using device: {self.device}")
+        
+#         try:
+#             self.processor = CLIPProcessor.from_pretrained(config.model_name)
+#             self.model = CLIPModel.from_pretrained(config.model_name).to(self.device)
+#             self.model.eval()
+#             # Optimize model for GPU if available
+#             if torch.cuda.is_available():
+#                 self.model = torch.compile(self.model)
+#             logger.info(f"Loaded model: {config.model_name}")
+#         except Exception as e:
+#             logger.error(f"Failed to load model: {e}")
+#             raise
+
+#     def extract_features(self, image_path: str) -> Optional[np.ndarray]:
+#         """Extract features from an image using CLIP."""
+#         try:
+#             img = Image.open(image_path).convert("RGB")
+#             img.thumbnail(
+#                 (self.config.max_image_size, self.config.max_image_size),
+#                 Image.Resampling.LANCZOS
+#             )
+#             inputs = self.processor(images=img, return_tensors="pt").to(self.device)
+#             with torch.no_grad(), torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):
+#                 features = self.model.get_image_features(**inputs)
+#             return features.cpu().numpy().flatten()
+#         except Exception as e:
+#             logger.error(f"Error processing {image_path}: {e}")
+#             return None
+
+#     def get_image_data(self, db) -> List[Dict]:
+#         """Fetch image data from MongoDB."""
+#         try:
+#             form_collection = db["forms"]
+#             documents = form_collection.find({
+#                 "beforePicturePaths": {"$exists": True},
+#                 "afterPicturePaths": {"$exists": True}
+#             })
+            
+#             image_data = []
+#             for doc in documents:
+#                 uid = doc.get("uid", None)
+#                 project_name = doc.get("projectName", "Unknown Project")
+#                 image_paths = doc.get("beforePicturePaths", []) + doc.get("afterPicturePaths", [])
+                
+#                 for path in image_paths:
+#                     abs_path = os.path.join(self.config.base_dir, path)
+#                     if os.path.isfile(abs_path):
+#                         image_data.append({
+#                             "path": abs_path,
+#                             "rel_path": path,
+#                             "uid": uid,
+#                             "projectName": project_name
+#                         })
+#             return image_data
+#         except Exception as e:
+#             logger.error(f"Error fetching image data from DB: {e}")
+#             return []
+
+#     def process_batch(self, image_data: List[Dict]) -> tuple[np.ndarray, List[Dict]]:
+#         """Process images in batches."""
+#         all_features = []
+#         valid_images = []
+        
+#         for i in range(0, len(image_data), self.config.batch_size):
+#             batch = image_data[i:i + self.config.batch_size]
+#             batch_features = [self.extract_features(img["path"]) for img in batch]
+#             valid_batch = [img for img, feat in zip(batch, batch_features) if feat is not None]
+#             valid_feats = [feat / np.linalg.norm(feat) for feat in batch_features if feat is not None]
+#             all_features.extend(valid_feats)
+#             valid_images.extend(valid_batch)
+#             logger.info(f"Processed batch {i//self.config.batch_size + 1}: "
+#                        f"{len(valid_feats)} valid features")
+        
+#         return np.array(all_features), valid_images
+
+#     def process_similarity(self, db) -> List[Dict]:
+#         """Process image similarity and store results."""
+#         image_data = self.get_image_data(db)
+#         if not image_data:
+#             logger.warning("No valid image files found in the database")
+#             return []
+
+#         # Process images in batches
+#         features, valid_images = self.process_batch(image_data)
+#         if not features.any():
+#             logger.warning("Failed to extract features for any images")
+#             return []
+
+#         # Compute similarity matrix
+#         similarity_matrix = np.dot(features, features.T)
+#         results = []
+        
+#         # Generate similarity results
+#         for i, query_img in enumerate(valid_images):
+#             for j, compared_img in enumerate(valid_images):
+#                 if i == j:  # Skip self-comparison
+#                     continue
+                
+#                 similarity_score = round(float(similarity_matrix[i, j] * 100), 2)
+#                 result = {
+#                     "_id": ObjectId(),
+#                     "queryUid": query_img["uid"],
+#                     "comparedUid": compared_img["uid"],
+#                     "queryImagePath": query_img["rel_path"],
+#                     "comparedImagePath": compared_img["rel_path"],
+#                     "similarityScore": similarity_score,
+#                     "isSimilar": similarity_score > self.config.similarity_threshold,
+#                     "processedAt": {"$date": "2025-03-15T17:52:31.802Z"}
+#                 }
+#                 results.append(result)
+#                 logger.info(f"Compared {result['queryImagePath']} vs "
+#                            f"{result['comparedImagePath']}: {similarity_score}%")
+
+#         # Save to MongoDB
+#         if results:
+#             try:
+#                 results_collection = db["image_similarity_results"]
+#                 results_collection.insert_many(results)
+#                 logger.info(f"Successfully inserted {len(results)} similarity results")
+#             except Exception as e:
+#                 logger.error(f"Error saving to MongoDB: {e}")
+
+#         return results
+
+# def main():
+#     """Main execution function."""
+#     try:
+#         db = get_db()
+#         processor = ImageSimilarityProcessor()
+#         results = processor.process_similarity(db)
+        
+#         if results:
+#             logger.info("\nFinal Results:")
+#             for res in results:
+#                 logger.info(f"{res['queryImagePath']} (UID: {res['queryUid']}) vs "
+#                            f"{res['comparedImagePath']} (UID: {res['comparedUid']}) -> "
+#                            f"{res['similarityScore']}% similarity")
+#         else:
+#             logger.info("No results to display")
+            
+#     except Exception as e:
+#         logger.error(f"Main execution failed: {e}")
+#         raise
+
+# if __name__ == "__main__":
+#     main()
+
+
+# ----------------------------------------------------------Chroma DB Working-------------------
+# import torch
+# from transformers import CLIPProcessor, CLIPModel
+# from PIL import Image
+# import numpy as np
+# import os
+# from bson import ObjectId
+# import logging
+# import chromadb
+# from dataclasses import dataclass
+# from typing import List, Dict, Optional
+# from config.db import get_db
+
+# @dataclass
+# class Config:
+#     model_name: str = "openai/clip-vit-large-patch14-336"
+#     base_dir: str = "/workspace/Text_and_Image_detection_web_app/backend/"
+#     similarity_threshold: float = 85.0
+#     batch_size: int = 32
+#     max_image_size: int = 336
+#     chromadb_collection: str = "image_embeddings"
+
+# # Configure logging
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger(__name__)
+
+# class ImageSimilarityProcessor:
+#     def __init__(self, config: Config = Config()):
+#         """Initialize the image similarity processor and ChromaDB."""
+#         self.config = config
+#         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#         logger.info(f"Using device: {self.device}")
+
+#         # Load CLIP Model
+#         try:
+#             self.processor = CLIPProcessor.from_pretrained(config.model_name)
+#             self.model = CLIPModel.from_pretrained(config.model_name).to(self.device)
+#             self.model.eval()
+#             if torch.cuda.is_available():
+#                 self.model = torch.compile(self.model)
+#             logger.info(f"Loaded model: {config.model_name}")
+#         except Exception as e:
+#             logger.error(f"Failed to load model: {e}")
+#             raise
+
+#         # Initialize ChromaDB
+#         self.client = chromadb.PersistentClient(path="./chromadb_store")
+#         self.collection = self.client.get_or_create_collection(name=self.config.chromadb_collection)
+#         logger.info(f"Connected to ChromaDB collection: {self.config.chromadb_collection}")
+
+#     def extract_features(self, image_path: str) -> Optional[np.ndarray]:
+#         """Extract features from an image using CLIP."""
+#         try:
+#             img = Image.open(image_path).convert("RGB")
+#             img.thumbnail((self.config.max_image_size, self.config.max_image_size), Image.Resampling.LANCZOS)
+#             inputs = self.processor(images=img, return_tensors="pt").to(self.device)
+#             with torch.no_grad(), torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):
+#                 features = self.model.get_image_features(**inputs)
+#             # Normalize the features for cosine similarity
+#             features = features / torch.norm(features, dim=-1, keepdim=True)
+#             return features.cpu().numpy().flatten()
+#         except Exception as e:
+#             logger.error(f"Error processing {image_path}: {e}")
+#             return None
+
+#     def get_image_data(self, db) -> List[Dict]:
+#         """Fetch image data from MongoDB."""
+#         try:
+#             form_collection = db["forms"]
+#             documents = form_collection.find({"beforePicturePaths": {"$exists": True}, "afterPicturePaths": {"$exists": True}})
+            
+#             image_data = []
+#             for doc in documents:
+#                 uid = doc.get("uid", None)
+#                 project_name = doc.get("projectName", "Unknown Project")
+#                 image_paths = doc.get("beforePicturePaths", []) + doc.get("afterPicturePaths", [])
+                
+#                 for path in image_paths:
+#                     abs_path = os.path.join(self.config.base_dir, path)
+#                     if os.path.isfile(abs_path):
+#                         image_data.append({
+#                             "path": abs_path,
+#                             "rel_path": path,
+#                             "uid": uid,
+#                             "projectName": project_name
+#                         })
+#             return image_data
+#         except Exception as e:
+#             logger.error(f"Error fetching image data from DB: {e}")
+#             return []
+
+#     def store_embeddings_in_chroma(self, image_data: List[Dict]):
+#         """Store image embeddings in ChromaDB with unique IDs."""
+#         try:
+#             # Clear existing embeddings only if there are any
+#             existing_ids = self.collection.get()["ids"]
+#             if existing_ids:  # Check if the list is non-empty
+#                 self.collection.delete(ids=existing_ids)
+#                 logger.info(f"Cleared {len(existing_ids)} existing embeddings from collection")
+            
+#             for i, img in enumerate(image_data):
+#                 embedding = self.extract_features(img["path"])
+#                 if embedding is not None:
+#                     unique_id = f"{img['uid']}_{i}"
+#                     self.collection.add(
+#                         ids=[unique_id],
+#                         embeddings=[embedding.tolist()],
+#                         metadatas=[{
+#                             "path": img["rel_path"],
+#                             "uid": str(img["uid"]),
+#                             "projectName": img["projectName"]
+#                         }]
+#                     )
+#                     logger.info(f"Stored embedding for {img['rel_path']} in ChromaDB with ID {unique_id}")
+#                 else:
+#                     logger.warning(f"Skipping {img['rel_path']} due to missing embedding.")
+#         except Exception as e:
+#             logger.error(f"Error storing embeddings in ChromaDB: {e}")
+#             raise
+
+#     def find_similar_images(self, image_data: List[Dict]) -> List[Dict]:
+#         """Find similar images using ChromaDB, excluding self-matches and duplicates."""
+#         results = []
+#         total_images = self.collection.count()
+#         seen_pairs = set()  # To track processed pairs and avoid duplicates
+        
+#         for img in image_data:
+#             embedding = self.extract_features(img["path"])
+#             if embedding is None:
+#                 continue
+
+#             # Query ChromaDB for similar images, no limit on results
+#             search_results = self.collection.query(
+#                 query_embeddings=[embedding.tolist()]
+#             )
+
+#             query_path = img["rel_path"]
+#             for i, (distance, matched) in enumerate(zip(search_results["distances"][0], search_results["metadatas"][0])):
+#                 matched_path = matched["path"]
+                
+#                 # Skip self-match by comparing paths
+#                 if query_path == matched_path:
+#                     continue
+
+#                 # Create a unique pair key to avoid duplicates
+#                 pair_key = tuple(sorted([query_path, matched_path]))
+#                 if pair_key in seen_pairs:
+#                     continue
+#                 seen_pairs.add(pair_key)
+
+#                 # Convert cosine distance to similarity percentage (0-100)
+#                 similarity_score = (1 - distance) * 100
+#                 logger.debug(f"Raw distance for {query_path} vs {matched_path}: {distance}")
+#                 similarity_score = max(0, min(100, similarity_score))  # Clamp to [0, 100]
+#                 is_similar = similarity_score > self.config.similarity_threshold
+
+#                 result = {
+#                     "_id": ObjectId(),
+#                     "queryUid": img["uid"],
+#                     "comparedUid": matched["uid"],
+#                     "queryImagePath": query_path,
+#                     "comparedImagePath": matched_path,
+#                     "similarityScore": round(similarity_score, 2),
+#                     "isSimilar": is_similar,
+#                     "processedAt": {"$date": "2025-03-16T08:56:50.097Z"}
+#                 }
+#                 results.append(result)
+#                 logger.info(f"Compared {query_path} vs {matched_path}: {similarity_score}%")
+
+#         return results
+
+#     def process_similarity(self, db) -> List[Dict]:
+#         """Process and store image similarity results using ChromaDB."""
+#         image_data = self.get_image_data(db)
+#         if not image_data:
+#             logger.warning("No valid image files found in the database")
+#             return []
+
+#         # Store embeddings in ChromaDB
+#         self.store_embeddings_in_chroma(image_data)
+
+#         # Find similar images
+#         results = self.find_similar_images(image_data)
+
+#         # Save results to MongoDB
+#         if results:
+#             try:
+#                 results_collection = db["image_similarity_results"]
+#                 results_collection.insert_many(results)
+#                 logger.info(f"Successfully inserted {len(results)} similarity results")
+#             except Exception as e:
+#                 logger.error(f"Error saving to MongoDB: {e}")
+
+#         return results
+
+# def main():
+#     """Main execution function."""
+#     try:
+#         db = get_db()
+#         processor = ImageSimilarityProcessor()
+#         results = processor.process_similarity(db)
+        
+#         if results:
+#             logger.info("\nFinal Results:")
+#             for res in results:
+#                 logger.info(f"{res['queryImagePath']} (UID: {res['queryUid']}) vs "
+#                            f"{res['comparedImagePath']} (UID: {res['comparedUid']}) -> "
+#                            f"{res['similarityScore']}% similarity")
+#         else:
+#             logger.info("No results to display")
+            
+#     except Exception as e:
+#         logger.error(f"Main execution failed: {e}")
+#         raise
+
+# if __name__ == "__main__":
+#     main()
+
+
+# --------------------------------------------------------FAISS ----------------------
 
 import torch
 from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 import numpy as np
 import os
+import faiss
 from bson import ObjectId
 import logging
+import pickle
+import datetime
 from dataclasses import dataclass
 from typing import List, Dict, Optional
-from config.db import get_db  # Assuming this is your DB config
+
+# Configure logging for this module
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Config:
     model_name: str = "openai/clip-vit-large-patch14-336"
-    base_dir: str = "/workspaces/Image_and_image_detection_web_app/backend/"
+    base_dir: str = "/workspace/Text_and_Image_detection_web_app/backend/"
     similarity_threshold: float = 85.0
     batch_size: int = 32
     max_image_size: int = 336
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+    faiss_index_path: str = "./faiss_store/image_index.idx"
+    metadata_path: str = "./faiss_store/metadata.pkl"
 
 class ImageSimilarityProcessor:
     def __init__(self, config: Config = Config()):
-        """Initialize the image similarity processor."""
+        """Initialize the image similarity processor with FAISS."""
         self.config = config
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         logger.info(f"Using device: {self.device}")
         
+        # Create directory for FAISS index and metadata if it doesn't exist
+        os.makedirs(os.path.dirname(config.faiss_index_path), exist_ok=True)
+
+        # Load CLIP Model
         try:
             self.processor = CLIPProcessor.from_pretrained(config.model_name)
             self.model = CLIPModel.from_pretrained(config.model_name).to(self.device)
             self.model.eval()
-            # Optimize model for GPU if available
             if torch.cuda.is_available():
                 self.model = torch.compile(self.model)
             logger.info(f"Loaded model: {config.model_name}")
@@ -881,17 +1284,27 @@ class ImageSimilarityProcessor:
             logger.error(f"Failed to load model: {e}")
             raise
 
+        # Initialize FAISS index
+        self.index = None
+        self.metadata = []
+        
     def extract_features(self, image_path: str) -> Optional[np.ndarray]:
         """Extract features from an image using CLIP."""
         try:
             img = Image.open(image_path).convert("RGB")
-            img.thumbnail(
-                (self.config.max_image_size, self.config.max_image_size),
-                Image.Resampling.LANCZOS
-            )
+            img.thumbnail((self.config.max_image_size, self.config.max_image_size), Image.Resampling.LANCZOS)
             inputs = self.processor(images=img, return_tensors="pt").to(self.device)
-            with torch.no_grad(), torch.cuda.amp.autocast(enabled=torch.cuda.is_available()):
-                features = self.model.get_image_features(**inputs)
+            
+            # Fixed deprecated autocast warning
+            with torch.no_grad():
+                if torch.cuda.is_available():
+                    with torch.amp.autocast('cuda'):
+                        features = self.model.get_image_features(**inputs)
+                else:
+                    features = self.model.get_image_features(**inputs)
+                    
+            # Normalize the features for cosine similarity
+            features = features / torch.norm(features, dim=-1, keepdim=True)
             return features.cpu().numpy().flatten()
         except Exception as e:
             logger.error(f"Error processing {image_path}: {e}")
@@ -901,10 +1314,7 @@ class ImageSimilarityProcessor:
         """Fetch image data from MongoDB."""
         try:
             form_collection = db["forms"]
-            documents = form_collection.find({
-                "beforePicturePaths": {"$exists": True},
-                "afterPicturePaths": {"$exists": True}
-            })
+            documents = form_collection.find({"beforePicturePaths": {"$exists": True}, "afterPicturePaths": {"$exists": True}})
             
             image_data = []
             for doc in documents:
@@ -921,96 +1331,182 @@ class ImageSimilarityProcessor:
                             "uid": uid,
                             "projectName": project_name
                         })
+            logger.info(f"Found {len(image_data)} images in the database")
             return image_data
         except Exception as e:
             logger.error(f"Error fetching image data from DB: {e}")
             return []
 
-    def process_batch(self, image_data: List[Dict]) -> tuple[np.ndarray, List[Dict]]:
-        """Process images in batches."""
-        all_features = []
-        valid_images = []
-        
-        for i in range(0, len(image_data), self.config.batch_size):
-            batch = image_data[i:i + self.config.batch_size]
-            batch_features = [self.extract_features(img["path"]) for img in batch]
-            valid_batch = [img for img, feat in zip(batch, batch_features) if feat is not None]
-            valid_feats = [feat / np.linalg.norm(feat) for feat in batch_features if feat is not None]
-            all_features.extend(valid_feats)
-            valid_images.extend(valid_batch)
-            logger.info(f"Processed batch {i//self.config.batch_size + 1}: "
-                       f"{len(valid_feats)} valid features")
-        
-        return np.array(all_features), valid_images
-
-    def process_similarity(self, db) -> List[Dict]:
-        """Process image similarity and store results."""
-        image_data = self.get_image_data(db)
-        if not image_data:
-            logger.warning("No valid image files found in the database")
-            return []
-
-        # Process images in batches
-        features, valid_images = self.process_batch(image_data)
-        if not features.any():
-            logger.warning("Failed to extract features for any images")
-            return []
-
-        # Compute similarity matrix
-        similarity_matrix = np.dot(features, features.T)
-        results = []
-        
-        # Generate similarity results
-        for i, query_img in enumerate(valid_images):
-            for j, compared_img in enumerate(valid_images):
-                if i == j:  # Skip self-comparison
-                    continue
+    def create_faiss_index(self, image_data: List[Dict]):
+        """Create and store FAISS index with image embeddings."""
+        try:
+            # Initialize a new FAISS index for cosine similarity
+            dimension = 768  # CLIP's embedding dimension for the selected model
+            self.index = faiss.IndexFlatIP(dimension)  # Use Inner Product for cosine similarity
+            self.metadata = []
+            
+            embeddings = []
+            
+            # Extract features for all images
+            for i, img in enumerate(image_data):
+                logger.info(f"Processing image {i+1}/{len(image_data)}: {img['rel_path']}")
+                embedding = self.extract_features(img["path"])
+                if embedding is not None:
+                    embeddings.append(embedding)
+                    # Store metadata separately
+                    self.metadata.append({
+                        "path": img["rel_path"],
+                        "uid": img["uid"],
+                        "projectName": img["projectName"]
+                    })
+                else:
+                    logger.warning(f"Skipping {img['rel_path']} due to missing embedding.")
+            
+            if not embeddings:
+                logger.warning("No valid embeddings created")
+                return False
                 
-                similarity_score = round(float(similarity_matrix[i, j] * 100), 2)
+            # Add embeddings to the index
+            embeddings_array = np.array(embeddings).astype('float32')
+            self.index.add(embeddings_array)
+            
+            # Save the index and metadata
+            faiss.write_index(self.index, self.config.faiss_index_path)
+            with open(self.config.metadata_path, 'wb') as f:
+                pickle.dump(self.metadata, f)
+                
+            logger.info(f"Created FAISS index with {len(embeddings)} embeddings and saved at {self.config.faiss_index_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating FAISS index: {e}")
+            return False
+    
+    def load_faiss_index(self) -> bool:
+        """Load FAISS index and metadata from disk if available."""
+        try:
+            if os.path.exists(self.config.faiss_index_path) and os.path.exists(self.config.metadata_path):
+                self.index = faiss.read_index(self.config.faiss_index_path)
+                with open(self.config.metadata_path, 'rb') as f:
+                    self.metadata = pickle.load(f)
+                logger.info(f"Loaded FAISS index with {self.index.ntotal} vectors and metadata")
+                return True
+            else:
+                logger.warning("FAISS index or metadata not found on disk")
+                return False
+        except Exception as e:
+            logger.error(f"Error loading FAISS index: {e}")
+            return False
+
+    def find_similar_images(self, image_data: List[Dict]) -> List[Dict]:
+        """Find similar images using FAISS, excluding self-matches and duplicates."""
+        results = []
+        seen_pairs = set()  # To track processed pairs and avoid duplicates
+        
+        for img in image_data:
+            embedding = self.extract_features(img["path"])
+            if embedding is None:
+                continue
+                                    
+            # Query FAISS for similar images
+            query_vector = np.array([embedding]).astype('float32')
+            k = min(100, self.index.ntotal)  # Limit results to avoid memory issues
+            distances, indices = self.index.search(query_vector, k)
+            
+            query_path = img["rel_path"]
+            
+            # Process search results
+            for i, (distance, idx) in enumerate(zip(distances[0], indices[0])):
+                if idx < 0 or idx >= len(self.metadata):
+                    continue  # Invalid index
+
+                matched = self.metadata[idx]
+                matched_path = matched["path"]
+                
+                # Skip self-match by comparing paths
+                if query_path == matched_path:
+                    continue
+
+                # Create a unique pair key to avoid duplicates
+                pair_key = tuple(sorted([query_path, matched_path]))
+                if pair_key in seen_pairs:
+                    continue
+                seen_pairs.add(pair_key)
+
+                # Convert inner product to similarity percentage (0-100)
+                # Since vectors are normalized, inner product = cosine similarity
+                similarity_score = float(distance * 100)  # Convert to native Python float
+                similarity_score = max(0, min(100, similarity_score))  # Clamp to [0, 100]
+                is_similar = bool(similarity_score > self.config.similarity_threshold)  # Convert to native Python bool
+
+                # Create a result document with Python native types
                 result = {
                     "_id": ObjectId(),
-                    "queryUid": query_img["uid"],
-                    "comparedUid": compared_img["uid"],
-                    "queryImagePath": query_img["rel_path"],
-                    "comparedImagePath": compared_img["rel_path"],
-                    "similarityScore": similarity_score,
-                    "isSimilar": similarity_score > self.config.similarity_threshold,
-                    "processedAt": {"$date": "2025-03-15T17:52:31.802Z"}
+                    "queryUid": img["uid"],
+                    "comparedUid": matched["uid"],
+                    "queryImagePath": query_path,
+                    "comparedImagePath": matched_path,
+                    "similarityScore": round(similarity_score, 2),
+                    "isSimilar": is_similar,
+                    "processedAt": datetime.datetime.utcnow()
                 }
                 results.append(result)
-                logger.info(f"Compared {result['queryImagePath']} vs "
-                           f"{result['comparedImagePath']}: {similarity_score}%")
+                logger.debug(f"Compared {query_path} vs {matched_path}: {similarity_score}%")
 
-        # Save to MongoDB
-        if results:
-            try:
-                results_collection = db["image_similarity_results"]
-                results_collection.insert_many(results)
-                logger.info(f"Successfully inserted {len(results)} similarity results")
-            except Exception as e:
-                logger.error(f"Error saving to MongoDB: {e}")
-
+        logger.info(f"Found {len(results)} similar image pairs")
         return results
 
-def main():
-    """Main execution function."""
-    try:
-        db = get_db()
-        processor = ImageSimilarityProcessor()
-        results = processor.process_similarity(db)
-        
-        if results:
-            logger.info("\nFinal Results:")
-            for res in results:
-                logger.info(f"{res['queryImagePath']} (UID: {res['queryUid']}) vs "
-                           f"{res['comparedImagePath']} (UID: {res['comparedUid']}) -> "
-                           f"{res['similarityScore']}% similarity")
-        else:
-            logger.info("No results to display")
-            
-    except Exception as e:
-        logger.error(f"Main execution failed: {e}")
-        raise
+    def process_similarity(self, db) -> List[Dict]:
+        """Process and store image similarity results using FAISS."""
+        try:
+            image_data = self.get_image_data(db)
+            if not image_data:
+                logger.warning("No valid image files found in the database")
+                return []
 
-if __name__ == "__main__":
-    main()
+            # Create or load FAISS index
+            index_exists = self.load_faiss_index()
+            if not index_exists:
+                logger.info("Creating new FAISS index")
+                if not self.create_faiss_index(image_data):
+                    logger.error("Failed to create FAISS index")
+                    return []
+            
+            # Find similar images
+            results = self.find_similar_images(image_data)
+
+            # Save results to MongoDB
+            if results:
+                try:
+                    # Drop existing collection to refresh results
+                    db.drop_collection("image_similarity_results")
+                    logger.info("Dropped existing image_similarity_results collection")
+                    
+                    # Insert new results
+                    results_collection = db["image_similarity_results"]
+                    
+                    # Insert in smaller batches
+                    batch_size = 50
+                    for i in range(0, len(results), batch_size):
+                        batch = results[i:i+batch_size]
+                        # Ensure all values are MongoDB-compatible
+                        for doc in batch:
+                            # Convert any numpy types to native Python types
+                            if isinstance(doc["similarityScore"], np.floating):
+                                doc["similarityScore"] = float(doc["similarityScore"])
+                            if isinstance(doc["isSimilar"], np.bool_):
+                                doc["isSimilar"] = bool(doc["isSimilar"])
+                        
+                        results_collection.insert_many(batch)
+                        logger.info(f"Inserted batch of {len(batch)} results into MongoDB")
+                    
+                    logger.info(f"Successfully inserted {len(results)} similarity results")
+                except Exception as e:
+                    logger.error(f"Error saving to MongoDB: {str(e)}")
+                    # Continue without failing so we can at least return the results
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in processing image similarity: {str(e)}")
+            return []
+        
