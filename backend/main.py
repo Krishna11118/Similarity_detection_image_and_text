@@ -15,8 +15,8 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://cautious-engine-r6q7q4gv74q3x447-5173.app.github.dev",
-        "http://localhost:5173",
+        "https://shiny-space-spork-65qvq9g75r6c5v6v-5173.app.github.dev"
+        "http://localhost:5173","*"
     ],
     allow_credentials=True,
     allow_methods=["*"],

@@ -12,3 +12,4 @@ pillow
 imagehash
 scipy
 transformers
+faiss-cpu
