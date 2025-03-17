@@ -13,3 +13,4 @@ imagehash
 scipy
 transformers
 faiss-cpu
+chromadb
