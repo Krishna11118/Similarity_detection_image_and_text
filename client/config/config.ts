@@ -1,1 +1,1 @@
-export const BACKEND_URL = 'https://shiny-space-spork-65qvq9g75r6c5v6v-8000.app.github.dev';
+export const BACKEND_URL = 'https://8000-krishna1111-textandimag-o8uj4glx42d.ws-us118.gitpod.io';

@@ -1031,7 +1031,7 @@ from config.db import get_db
 @dataclass
 class Config:
     model_name: str = "openai/clip-vit-large-patch14-336"
-    base_dir: str = "/workspace/Text_and_Image_detection_web_app/backend/"
+    base_dir: str = "/workspace/Text_and_Image_detection/backend/"
     similarity_threshold: float = 85.0
     batch_size: int = 32
     max_image_size: int = 336
