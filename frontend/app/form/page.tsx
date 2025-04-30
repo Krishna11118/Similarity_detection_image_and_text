@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+"use client"
+import React from 'react';
+import{useState} from  'react'
 import DatePicker from 'react-datepicker';
 import { Upload, X, Image } from 'lucide-react';
 import { FormFormData } from './types';
 import "react-datepicker/dist/react-datepicker.css";
 import { BACKEND_URL } from '../config/config';
 
-function App() {
+
+function Form() {
   const [formData, setFormData] = useState<FormFormData>({
     projectName: 'Test Project',
     formTheme: 'Test Theme',
@@ -92,6 +95,7 @@ function App() {
     }
 
     try {
+        console.log("BACKEND_URL",BACKEND_URL)
       const response = await fetch(`${BACKEND_URL}/api/form`, {
         method: 'POST',
         body: formDataToSend,
@@ -118,6 +122,7 @@ function App() {
         // });
         setPreviewImages({ before: [], after: [] });
       } else {
+        
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
         console.error('Server error:', errorData);
         alert(`Error submitting form: ${JSON.stringify(errorData)}`);
@@ -131,7 +136,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <form onSubmit={handleSubmit} className="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6">Project Details</h1>
+        <h1 className="text-2xl text-gray-800 font-bold mb-6">Project Details</h1>
 
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -145,7 +150,7 @@ function App() {
               value={formData.projectName}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 text-gray-600 border rounded-md"
             />
           </div>
 
@@ -159,7 +164,7 @@ function App() {
               value={formData.formTheme}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full text-gray-600 p-2 border rounded-md"
             />
           </div>
         </div>
@@ -172,7 +177,7 @@ function App() {
             <DatePicker
               selected={formData.dateOfIdentification ? new Date(formData.dateOfIdentification) : null}
               onChange={(date: Date) => setFormData(prev => ({ ...prev, dateOfIdentification: date.toISOString() }))}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border text-gray-600 rounded-md"
               dateFormat="yyyy-MM-dd"
               required
             />
@@ -187,7 +192,7 @@ function App() {
               value={formData.location}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full text-gray-600 p-2 border rounded-md"
             >
               <option value="">Select Location</option>
               <option value="Plant 1">Plant 1</option>
@@ -208,7 +213,7 @@ function App() {
               value={formData.category}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full text-gray-600 p-2 border rounded-md"
             >
               <option value="">Select Category</option>
               <option value="Mission 1000 PSB">Mission 1000 PSB</option>
@@ -226,7 +231,7 @@ function App() {
               value={formData.subCategory}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full text-gray-600 p-2 border rounded-md"
             >
               <option value="">Select Sub Category</option>
               <option value="Efficiency">Efficiency</option>
@@ -246,7 +251,7 @@ function App() {
               value={formData.department}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full text-gray-600 p-2 border rounded-md"
             >
               <option value="">Select Department</option>
               <option value="Production">Production</option>
@@ -257,14 +262,14 @@ function App() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Gemba Unit <span className="text-red-500">*</span>
+              Gemba Unit <span className=" text-gray-600 text-red-500">*</span>
             </label>
             <select
               name="gembaUnit"
               value={formData.gembaUnit}
               onChange={handleInputChange}
               required
-              className="w-full p-2 border rounded-md"
+              className="w-full  text-gray-600 p-2 border rounded-md"
             >
               <option value="">Select Gemba Unit</option>
               <option value="Assembly Line">Assembly Line</option>
@@ -281,7 +286,7 @@ function App() {
           <DatePicker
             selected={formData.dateOfCompletion ? new Date(formData.dateOfCompletion) : null}
             onChange={(date: Date) => setFormData(prev => ({ ...prev, dateOfCompletion: date.toISOString() }))}
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 text-gray-600 border rounded-md"
             dateFormat="yyyy-MM-dd"
             required
           />
@@ -299,7 +304,7 @@ function App() {
               onChange={handleInputChange}
               required
               rows={4}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 text-gray-600 border rounded-md"
             />
           </div>
 
@@ -313,7 +318,7 @@ function App() {
               onChange={handleInputChange}
               required
               rows={4}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border text-gray-600 rounded-md"
             />
           </div>
 
@@ -327,7 +332,7 @@ function App() {
               onChange={handleInputChange}
               required
               rows={4}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border  text-gray-600 rounded-md"
             />
           </div>
 
@@ -341,7 +346,7 @@ function App() {
               onChange={handleInputChange}
               required
               rows={4}
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border text-gray-600 rounded-md"
             />
           </div>
         </div>
@@ -466,4 +471,4 @@ function App() {
   );
 }
 
-export default App;
+export default Form;

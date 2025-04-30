@@ -1,1 +1,0 @@
-# Image_and_image_detection_web_app
