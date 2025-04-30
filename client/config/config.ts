@@ -1,1 +1,1 @@
-export const BACKEND_URL = 'https://8000-krishna1111-textandimag-o8uj4glx42d.ws-us118.gitpod.io';
+export const BACKEND_URL = 'https://8000-krishna1111-textandimag-db0kt0z12oq.ws-us118.gitpod.io';

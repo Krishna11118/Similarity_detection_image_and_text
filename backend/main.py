@@ -4,8 +4,8 @@ from typing import List
 import os
 from datetime import datetime
 from pymongo import MongoClient
+from utils import generate_uid  
 from dotenv import load_dotenv
-from utils import generate_uid  # Import the utility function
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://shiny-space-spork-65qvq9g75r6c5v6v-5173.app.github.dev"
+        "https://8000-krishna1111-textandimag-db0kt0z12oq.ws-us118.gitpod.io"
         "http://localhost:5173","*"
     ],
     allow_credentials=True,

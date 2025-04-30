@@ -6,6 +6,7 @@ fastapi
 uvicorn
 motor
 pymongo
+dotenv
 
 torchvision
 pillow
