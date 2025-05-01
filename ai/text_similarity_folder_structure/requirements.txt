@@ -1,8 +1,0 @@
-pymongo
-sentence-transformers
-scikit-learn
-numpy
-fastapi
-uvicorn
-motor
-pymongo
