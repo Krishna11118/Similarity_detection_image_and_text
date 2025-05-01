@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { InfoIcon, ChevronDown, ChevronUp } from "lucide-react"
 import type { ImageComparisonData, FormData } from "@/types/types"
 import { formatDate } from "@/lib/utils"
-// import pathh from "../../backend/uploads"
 
 interface ImageComparisonCardProps {
   data: ImageComparisonData
@@ -49,7 +48,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
             <p className="text-xs text-muted-foreground">Query Image</p>
             <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
               <img
-                src={`${process.env.NEXT_PUBLIC_IMAGE_ENDPOINT}/${data.queryImagePath}`}
+                src={`/${data.queryImagePath}`}
                 alt="Query"
                 className="object-cover w-full h-full"
                 onError={(e) => {
@@ -63,7 +62,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
             <p className="text-xs text-muted-foreground">Compared Image</p>
             <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
               <img
-                src={`${process.env.NEXT_PUBLIC_IMAGE_ENDPOINT}/${data.comparedImagePath}`}
+                src={`/${data.comparedImagePath}`}
                 alt="Compared"
                 className="object-cover w-full h-full"
                 onError={(e) => {
@@ -107,7 +106,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
                         <h3 className="font-medium mb-2">Query Image</h3>
                         <div className="aspect-video bg-muted rounded-md overflow-hidden">
                           <img
-                            src={`${process.env.NEXT_PUBLIC_IMAGE_ENDPOINT}/${data.queryImagePath}`}
+                            src={`/${data.queryImagePath}`}
                             alt="Query"
                             className="object-cover w-full h-full"
                             onError={(e) => {
@@ -121,7 +120,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
                         <h3 className="font-medium mb-2">Compared Image</h3>
                         <div className="aspect-video bg-muted rounded-md overflow-hidden">
                           <img
-                            src={`${process.env.NEXT_PUBLIC_IMAGE_ENDPOINT}/${data.comparedImagePath}`}
+                            src={`/${data.comparedImagePath}`}
                             alt="Compared"
                             className="object-cover w-full h-full"
                             onError={(e) => {
