@@ -41,6 +41,8 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+
 function formatImagePath(rawPath: string | undefined | null): string {
   if (!rawPath) return "/placeholder.svg";
   if (
