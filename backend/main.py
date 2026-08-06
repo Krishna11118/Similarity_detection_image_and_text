@@ -34,9 +34,12 @@ if not mongo_uri:
 client = MongoClient(mongo_uri)
 db = client.form_db
 
+from fastapi.staticfiles import StaticFiles
+
 # ---------------- File Upload Directory ---------------- #
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # ---------------- Form Endpoint ---------------- #
 @app.post("/api/form")

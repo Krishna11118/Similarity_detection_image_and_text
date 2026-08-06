@@ -17,6 +17,13 @@ interface ImageComparisonCardProps {
   comparedForm?: FormData
 }
 
+const formatSrc = (pathStr: string | undefined | null): string => {
+  if (!pathStr) return "/placeholder.svg"
+  if (pathStr.startsWith("http://") || pathStr.startsWith("https://")) return pathStr
+  if (pathStr.startsWith("/")) return pathStr
+  return `/${pathStr}`
+}
+
 export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComparisonCardProps) {
   const [showDetails, setShowDetails] = useState(false)
 
@@ -48,7 +55,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
             <p className="text-xs text-muted-foreground">Query Image</p>
             <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
               <img
-                src={`/${data.queryImagePath}`}
+                src={formatSrc(data.queryImagePath)}
                 alt="Query"
                 className="object-cover w-full h-full"
                 onError={(e) => {
@@ -62,7 +69,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
             <p className="text-xs text-muted-foreground">Compared Image</p>
             <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
               <img
-                src={`/${data.comparedImagePath}`}
+                src={formatSrc(data.comparedImagePath)}
                 alt="Compared"
                 className="object-cover w-full h-full"
                 onError={(e) => {
@@ -106,7 +113,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
                         <h3 className="font-medium mb-2">Query Image</h3>
                         <div className="aspect-video bg-muted rounded-md overflow-hidden">
                           <img
-                            src={`/${data.queryImagePath}`}
+                            src={formatSrc(data.queryImagePath)}
                             alt="Query"
                             className="object-cover w-full h-full"
                             onError={(e) => {
@@ -120,7 +127,7 @@ export function ImageComparisonCard({ data, queryForm, comparedForm }: ImageComp
                         <h3 className="font-medium mb-2">Compared Image</h3>
                         <div className="aspect-video bg-muted rounded-md overflow-hidden">
                           <img
-                            src={`/${data.comparedImagePath}`}
+                            src={formatSrc(data.comparedImagePath)}
                             alt="Compared"
                             className="object-cover w-full h-full"
                             onError={(e) => {

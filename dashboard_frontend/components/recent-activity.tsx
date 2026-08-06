@@ -13,6 +13,13 @@ interface RecentActivityProps {
   loading: boolean
 }
 
+const formatSrc = (pathStr: string | undefined | null): string => {
+  if (!pathStr) return "/placeholder.svg"
+  if (pathStr.startsWith("http://") || pathStr.startsWith("https://")) return pathStr
+  if (pathStr.startsWith("/")) return pathStr
+  return `/${pathStr}`
+}
+
 export function RecentActivity({ data, forms, loading }: RecentActivityProps) {
   // Get the 5 most recent comparisons
   const recentComparisons = [...data]
@@ -80,7 +87,7 @@ export function RecentActivity({ data, forms, loading }: RecentActivityProps) {
                     <div className="flex items-center gap-2">
                       <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
                         <img
-                          src={`/${comparison.queryImagePath}`}
+                          src={formatSrc(comparison.queryImagePath)}
                           alt="Query"
                           className="h-full w-full object-cover"
                           onError={(e) => {
@@ -104,7 +111,7 @@ export function RecentActivity({ data, forms, loading }: RecentActivityProps) {
                     <div className="flex items-center gap-2">
                       <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
                         <img
-                          src={`/${comparison.comparedImagePath}`}
+                          src={formatSrc(comparison.comparedImagePath)}
                           alt="Compared"
                           className="h-full w-full object-cover"
                           onError={(e) => {

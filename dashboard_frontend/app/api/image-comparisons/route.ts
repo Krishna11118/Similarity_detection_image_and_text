@@ -41,8 +41,17 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import path from "path";
 
-// Configure the base folder path for images (adjust as needed)
-const IMAGE_BASE_PATH = "https://github.com/Krishna11118/Text_and_Image_detection/tree/70bd5d5b6f0b45637ea26e1733a2ccec774d5c9a/backend/"
+function formatImagePath(rawPath: string | undefined | null): string {
+  if (!rawPath) return "/placeholder.svg";
+  if (
+    (rawPath.startsWith("http://") || rawPath.startsWith("https://")) &&
+    !rawPath.includes("github.com")
+  ) {
+    return rawPath;
+  }
+  const filename = path.basename(rawPath);
+  return `/api/uploads/${filename}`;
+}
 
 export async function GET(request: Request) {
   try {
@@ -85,7 +94,7 @@ export async function GET(request: Request) {
       return map;
     }, {} as Record<string, { beforePicturePaths: string[]; afterPicturePaths: string[] }>);
 
-    // Format comparisons and include form picture paths with base folder path
+    // Format comparisons and include form picture paths with /api/uploads/ endpoint
     const formattedComparisons = comparisons.map((comparison) => {
       const formData = formMap[comparison.queryUid] || {
         beforePicturePaths: [],
@@ -95,14 +104,10 @@ export async function GET(request: Request) {
       return {
         ...comparison,
         _id: comparison._id.toString(),
-        queryImagePath: path.join(IMAGE_BASE_PATH, comparison.queryImagePath),
-        comparedImagePath: path.join(IMAGE_BASE_PATH, comparison.comparedImagePath),
-        beforePicturePaths: formData.beforePicturePaths.map((p: string) =>
-          path.join(IMAGE_BASE_PATH, p)
-        ),
-        afterPicturePaths: formData.afterPicturePaths.map((p: string) =>
-          path.join(IMAGE_BASE_PATH, p)
-        ),
+        queryImagePath: formatImagePath(comparison.queryImagePath),
+        comparedImagePath: formatImagePath(comparison.comparedImagePath),
+        beforePicturePaths: formData.beforePicturePaths.map(formatImagePath),
+        afterPicturePaths: formData.afterPicturePaths.map(formatImagePath),
       };
     });
 
