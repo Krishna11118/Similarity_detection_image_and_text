@@ -9,7 +9,6 @@ export async function GET(
   try {
     const resolvedParams = await params
     const pathSegments = resolvedParams?.path || []
-
     const filename = path.basename(pathSegments.join("/"))
 
     if (!filename) {
@@ -18,6 +17,7 @@ export async function GET(
 
     const decodedFilename = decodeURIComponent(filename)
 
+    // 1. Try local filesystem (for local development)
     const possiblePaths = [
       path.join(process.cwd(), "..", "backend", "uploads", decodedFilename),
       path.join(process.cwd(), "uploads", decodedFilename),
@@ -27,33 +27,65 @@ export async function GET(
 
     let foundPath: string | null = null
     for (const p of possiblePaths) {
-      if (fs.existsSync(p)) {
-        foundPath = p
-        break
+      try {
+        if (fs.existsSync(p)) {
+          foundPath = p
+          break
+        }
+      } catch {
+        // Ignore filesystem permission or path restrictions on cloud platforms
       }
     }
 
-    if (!foundPath) {
-      return new NextResponse("Image not found", { status: 404 })
+    if (foundPath) {
+      const fileBuffer = fs.readFileSync(foundPath)
+      const ext = path.extname(foundPath).toLowerCase()
+
+      let contentType = "application/octet-stream"
+      if (ext === ".jpg" || ext === ".jpeg") contentType = "image/jpeg"
+      else if (ext === ".png") contentType = "image/png"
+      else if (ext === ".gif") contentType = "image/gif"
+      else if (ext === ".svg") contentType = "image/svg+xml"
+      else if (ext === ".webp") contentType = "image/webp"
+
+      return new NextResponse(fileBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=3600, must-revalidate",
+        },
+      })
     }
 
-    const fileBuffer = fs.readFileSync(foundPath)
-    const ext = path.extname(foundPath).toLowerCase()
+    // 2. Fallback for Vercel / Deployed environments:
+    // Proxy request to backend service URL (e.g. BACKEND_URL or NEXT_PUBLIC_IMAGE_ENDPOINT)
+    const backendBaseUrl =
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_IMAGE_ENDPOINT ||
+      "http://localhost:8000"
 
-    let contentType = "application/octet-stream"
-    if (ext === ".jpg" || ext === ".jpeg") contentType = "image/jpeg"
-    else if (ext === ".png") contentType = "image/png"
-    else if (ext === ".gif") contentType = "image/gif"
-    else if (ext === ".svg") contentType = "image/svg+xml"
-    else if (ext === ".webp") contentType = "image/webp"
+    const backendImageUrl = `${backendBaseUrl.replace(/\/$/, "")}/uploads/${encodeURIComponent(decodedFilename)}`
 
-    return new NextResponse(fileBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=3600, must-revalidate",
-      },
-    })
+    try {
+      const backendRes = await fetch(backendImageUrl)
+      if (backendRes.ok) {
+        const imageBuffer = await backendRes.arrayBuffer()
+        const contentType =
+          backendRes.headers.get("content-type") || "image/jpeg"
+
+        return new NextResponse(imageBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=3600, must-revalidate",
+          },
+        })
+      }
+    } catch (proxyError) {
+      console.error("Failed to proxy image from backend:", proxyError)
+    }
+
+    return new NextResponse("Image not found", { status: 404 })
   } catch (error) {
     console.error("Error serving uploaded image:", error)
     return new NextResponse("Internal Server Error", { status: 500 })
