@@ -1,6 +1,6 @@
 "use client"
 
-import { FolderIcon, ImageIcon, BarChartIcon, SettingsIcon, HomeIcon, UploadIcon } from "lucide-react"
+import { ImageIcon, BarChartIcon, SettingsIcon, HomeIcon } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -51,22 +51,6 @@ export function DashboardSidebar({ activeItem, onNavigate }: DashboardSidebarPro
               <a href="/analytics">
                 <BarChartIcon className="h-4 w-4" />
                 <span>Analytics</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={activeItem === "upload"} onClick={() => onNavigate("upload")}>
-              <a href="/upload">
-                <UploadIcon className="h-4 w-4" />
-                <span>Upload Images</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={activeItem === "projects"} onClick={() => onNavigate("projects")}>
-              <a href="/projects">
-                <FolderIcon className="h-4 w-4" />
-                <span>Projects</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
