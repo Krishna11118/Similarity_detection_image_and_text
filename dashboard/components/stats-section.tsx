@@ -22,17 +22,20 @@ export function StatsSection({ data, loading }: StatsSectionProps) {
     )
   }
 
-  // Calculate stats
+  // Calculate stats (guard against divide-by-zero when there is no data)
   const totalComparisons = data.length
   const highMatchCount = data.filter((item) => item.similarityScore >= 80).length
   const mediumMatchCount = data.filter((item) => item.similarityScore >= 60 && item.similarityScore < 80).length
   const lowMatchCount = data.filter((item) => item.similarityScore < 60).length
 
-  const highMatchPercentage = (highMatchCount / totalComparisons) * 100
-  const mediumMatchPercentage = (mediumMatchCount / totalComparisons) * 100
-  const lowMatchPercentage = (lowMatchCount / totalComparisons) * 100
+  const pct = (n: number) => (totalComparisons ? (n / totalComparisons) * 100 : 0)
+  const highMatchPercentage = pct(highMatchCount)
+  const mediumMatchPercentage = pct(mediumMatchCount)
+  const lowMatchPercentage = pct(lowMatchCount)
 
-  const averageScore = data.reduce((sum, item) => sum + item.similarityScore, 0) / totalComparisons
+  const averageScore = totalComparisons
+    ? data.reduce((sum, item) => sum + item.similarityScore, 0) / totalComparisons
+    : 0
 
   return (
     <div className="space-y-4">
@@ -45,26 +48,26 @@ export function StatsSection({ data, loading }: StatsSectionProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span>High Match ({highMatchCount})</span>
-              <span className="font-medium">{highMatchPercentage.toFixed(1)}%</span>
+              <span>High match ({highMatchCount})</span>
+              <span className="font-data font-medium">{highMatchPercentage.toFixed(1)}%</span>
             </div>
-            <Progress value={highMatchPercentage} className="h-2" indicatorClassName="bg-green-500" />
+            <Progress value={highMatchPercentage} className="h-2" indicatorClassName="bg-chart-2" />
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span>Medium Match ({mediumMatchCount})</span>
-              <span className="font-medium">{mediumMatchPercentage.toFixed(1)}%</span>
+              <span>Medium match ({mediumMatchCount})</span>
+              <span className="font-data font-medium">{mediumMatchPercentage.toFixed(1)}%</span>
             </div>
-            <Progress value={mediumMatchPercentage} className="h-2" indicatorClassName="bg-yellow-500" />
+            <Progress value={mediumMatchPercentage} className="h-2" indicatorClassName="bg-primary" />
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span>Low Match ({lowMatchCount})</span>
-              <span className="font-medium">{lowMatchPercentage.toFixed(1)}%</span>
+              <span>Low match ({lowMatchCount})</span>
+              <span className="font-data font-medium">{lowMatchPercentage.toFixed(1)}%</span>
             </div>
-            <Progress value={lowMatchPercentage} className="h-2" indicatorClassName="bg-red-500" />
+            <Progress value={lowMatchPercentage} className="h-2" indicatorClassName="bg-chart-3" />
           </div>
         </CardContent>
       </Card>
@@ -75,14 +78,18 @@ export function StatsSection({ data, loading }: StatsSectionProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold">{averageScore.toFixed(1)}%</span>
-            <span className="text-xs text-muted-foreground">Across {totalComparisons} comparisons</span>
+            <span className="font-data text-3xl font-bold">
+              {totalComparisons ? `${averageScore.toFixed(1)}%` : "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {totalComparisons ? `Across ${totalComparisons} comparisons` : "No comparisons yet"}
+            </span>
           </div>
           <Progress
             value={averageScore}
             className="h-2 mt-4"
             indicatorClassName={
-              averageScore >= 80 ? "bg-green-500" : averageScore >= 60 ? "bg-yellow-500" : "bg-red-500"
+              averageScore >= 80 ? "bg-chart-2" : averageScore >= 60 ? "bg-primary" : "bg-chart-3"
             }
           />
         </CardContent>
